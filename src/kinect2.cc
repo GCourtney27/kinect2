@@ -1320,117 +1320,117 @@ NAN_METHOD(CloseBodyReaderFunction)
 	info.GetReturnValue().Set(true);
 }
 
-NAUV_WORK_CB(MultiSourceProgress_) {
-	Nan::HandleScope scope;
-	uv_mutex_lock(&m_mMultiSourceReaderMutex);
-	if(m_pMultiSourceReaderCallback != NULL)
-	{
-		//build object for callback
-		v8::Local<v8::Object> v8Result = Nan::New<v8::Object>();
-
-		if(NodeKinect2FrameTypes::FrameTypes_Color & m_enabledFrameTypes)
-		{
-			//reuse the existing buffer
-			v8::Local<v8::Object> v8ColorPixels = Nan::New(m_persistentColorPixels);
-
-			v8::Local<v8::Object> v8ColorResult = Nan::New<v8::Object>();
-			Nan::Set(v8ColorResult, Nan::New<v8::String>("buffer").ToLocalChecked(), v8ColorPixels);
-
-			//field of view
-			Nan::Set(v8ColorResult, Nan::New<v8::String>("horizontalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorHorizontalFieldOfViewV8));
-			Nan::Set(v8ColorResult, Nan::New<v8::String>("verticalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorVerticalFieldOfViewV8));
-			Nan::Set(v8ColorResult, Nan::New<v8::String>("diagonalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorDiagonalFieldOfViewV8));
-
-			Nan::Set(v8Result, Nan::New<v8::String>("color").ToLocalChecked(), v8ColorResult);
-		}
-
-		if(NodeKinect2FrameTypes::FrameTypes_Depth & m_enabledFrameTypes)
-		{
-			//reuse the existing buffer
-			v8::Local<v8::Object> v8DepthPixels = Nan::New(m_persistentDepthPixels);
-
-			v8::Local<v8::Object> v8DepthResult = Nan::New<v8::Object>();
-			Nan::Set(v8DepthResult, Nan::New<v8::String>("buffer").ToLocalChecked(), v8DepthPixels);
-
-			//field of view
-			Nan::Set(v8DepthResult, Nan::New<v8::String>("horizontalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthHorizontalFieldOfViewV8));
-			Nan::Set(v8DepthResult, Nan::New<v8::String>("verticalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthVerticalFieldOfViewV8));
-			Nan::Set(v8DepthResult, Nan::New<v8::String>("diagonalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthDiagonalFieldOfViewV8));
-
-			Nan::Set(v8Result, Nan::New<v8::String>("depth").ToLocalChecked(), v8DepthResult);
-		}
-
-		if(NodeKinect2FrameTypes::FrameTypes_RawDepth & m_enabledFrameTypes)
-		{
-			//reuse the existing buffer
-			v8::Local<v8::Object> v8RawDepthValues = Nan::New(m_persistentRawDepthValues);
-
-			v8::Local<v8::Object> v8RawDepthResult = Nan::New<v8::Object>();
-			Nan::Set(v8RawDepthResult, Nan::New<v8::String>("buffer").ToLocalChecked(), v8RawDepthValues);
-
-			//field of view
-			Nan::Set(v8RawDepthResult, Nan::New<v8::String>("horizontalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthHorizontalFieldOfViewV8));
-			Nan::Set(v8RawDepthResult, Nan::New<v8::String>("verticalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthVerticalFieldOfViewV8));
-			Nan::Set(v8RawDepthResult, Nan::New<v8::String>("diagonalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthDiagonalFieldOfViewV8));
-
-			Nan::Set(v8Result, Nan::New<v8::String>("rawDepth").ToLocalChecked(), v8RawDepthResult);
-		}
-
-		if(NodeKinect2FrameTypes::FrameTypes_DepthColor & m_enabledFrameTypes)
-		{
-			//reuse the existing buffer
-			v8::Local<v8::Object> v8DepthColorPixels = Nan::New(m_persistentDepthColorPixels);
-
-			v8::Local<v8::Object> v8DepthColorResult = Nan::New<v8::Object>();
-			Nan::Set(v8DepthColorResult, Nan::New<v8::String>("buffer").ToLocalChecked(), v8DepthColorPixels);
-
-			Nan::Set(v8Result, Nan::New<v8::String>("depthColor").ToLocalChecked(), v8DepthColorResult);
-		}
-
-		if(NodeKinect2FrameTypes::FrameTypes_Body & m_enabledFrameTypes)
-		{
-			v8::Local<v8::Object> v8BodyResult = getV8BodyFrame_();
-
-			Nan::Set(v8Result, Nan::New<v8::String>("body").ToLocalChecked(), v8BodyResult);
-		}
-
-		if(NodeKinect2FrameTypes::FrameTypes_BodyIndexColor & m_enabledFrameTypes)
-		{
-			v8::Local<v8::Object> v8BodyIndexColorResult = Nan::New<v8::Object>();
-
-			//persistent handle of array with color buffers
-			v8::Local<v8::Object> v8BodyIndexColorPixels = Nan::New(m_persistentBodyIndexColorPixels);
-
-			v8::Local<v8::Array> v8bodies = Nan::New<v8::Array>(BODY_COUNT);
-			for(int i = 0; i < BODY_COUNT; i++)
-			{
-				v8::Local<v8::Object> v8body = Nan::New<v8::Object>();
-				Nan::Set(v8body, Nan::New<v8::String>("bodyIndex").ToLocalChecked(), Nan::New<v8::Number>(i));
-				if(m_jsBodyFrameV8.bodies[i].hasPixels && m_trackPixelsForBodyIndexV8[i]) {
-					//reuse the existing buffer
-					v8::Local<v8::Value> v8ColorPixels = v8BodyIndexColorPixels->Get(i);
-					Nan::Set(v8body, Nan::New<v8::String>("buffer").ToLocalChecked(), v8ColorPixels);
-				}
-				Nan::Set(v8bodies, i, v8body);
-			}
-			Nan::Set(v8BodyIndexColorResult, Nan::New<v8::String>("bodies").ToLocalChecked(), v8bodies);
-
-			//field of view pf color camera
-			Nan::Set(v8BodyIndexColorResult, Nan::New<v8::String>("horizontalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorHorizontalFieldOfViewV8));
-			Nan::Set(v8BodyIndexColorResult, Nan::New<v8::String>("verticalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorVerticalFieldOfViewV8));
-			Nan::Set(v8BodyIndexColorResult, Nan::New<v8::String>("diagonalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorDiagonalFieldOfViewV8));
-
-			Nan::Set(v8Result, Nan::New<v8::String>("bodyIndexColor").ToLocalChecked(), v8BodyIndexColorResult);
-		}
-
-		v8::Local<v8::Value> argv[] = {
-			v8Result
-		};
-
-		m_pMultiSourceReaderCallback->Call(1, argv);
-	}
-	uv_mutex_unlock(&m_mMultiSourceReaderMutex);
-}
+//NAUV_WORK_CB(MultiSourceProgress_) {
+//	Nan::HandleScope scope;
+//	uv_mutex_lock(&m_mMultiSourceReaderMutex);
+//	if(m_pMultiSourceReaderCallback != NULL)
+//	{
+//		//build object for callback
+//		v8::Local<v8::Object> v8Result = Nan::New<v8::Object>();
+//
+//		if(NodeKinect2FrameTypes::FrameTypes_Color & m_enabledFrameTypes)
+//		{
+//			//reuse the existing buffer
+//			v8::Local<v8::Object> v8ColorPixels = Nan::New(m_persistentColorPixels);
+//
+//			v8::Local<v8::Object> v8ColorResult = Nan::New<v8::Object>();
+//			Nan::Set(v8ColorResult, Nan::New<v8::String>("buffer").ToLocalChecked(), v8ColorPixels);
+//
+//			//field of view
+//			Nan::Set(v8ColorResult, Nan::New<v8::String>("horizontalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorHorizontalFieldOfViewV8));
+//			Nan::Set(v8ColorResult, Nan::New<v8::String>("verticalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorVerticalFieldOfViewV8));
+//			Nan::Set(v8ColorResult, Nan::New<v8::String>("diagonalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorDiagonalFieldOfViewV8));
+//
+//			Nan::Set(v8Result, Nan::New<v8::String>("color").ToLocalChecked(), v8ColorResult);
+//		}
+//
+//		if(NodeKinect2FrameTypes::FrameTypes_Depth & m_enabledFrameTypes)
+//		{
+//			//reuse the existing buffer
+//			v8::Local<v8::Object> v8DepthPixels = Nan::New(m_persistentDepthPixels);
+//
+//			v8::Local<v8::Object> v8DepthResult = Nan::New<v8::Object>();
+//			Nan::Set(v8DepthResult, Nan::New<v8::String>("buffer").ToLocalChecked(), v8DepthPixels);
+//
+//			//field of view
+//			Nan::Set(v8DepthResult, Nan::New<v8::String>("horizontalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthHorizontalFieldOfViewV8));
+//			Nan::Set(v8DepthResult, Nan::New<v8::String>("verticalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthVerticalFieldOfViewV8));
+//			Nan::Set(v8DepthResult, Nan::New<v8::String>("diagonalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthDiagonalFieldOfViewV8));
+//
+//			Nan::Set(v8Result, Nan::New<v8::String>("depth").ToLocalChecked(), v8DepthResult);
+//		}
+//
+//		if(NodeKinect2FrameTypes::FrameTypes_RawDepth & m_enabledFrameTypes)
+//		{
+//			//reuse the existing buffer
+//			v8::Local<v8::Object> v8RawDepthValues = Nan::New(m_persistentRawDepthValues);
+//
+//			v8::Local<v8::Object> v8RawDepthResult = Nan::New<v8::Object>();
+//			Nan::Set(v8RawDepthResult, Nan::New<v8::String>("buffer").ToLocalChecked(), v8RawDepthValues);
+//
+//			//field of view
+//			Nan::Set(v8RawDepthResult, Nan::New<v8::String>("horizontalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthHorizontalFieldOfViewV8));
+//			Nan::Set(v8RawDepthResult, Nan::New<v8::String>("verticalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthVerticalFieldOfViewV8));
+//			Nan::Set(v8RawDepthResult, Nan::New<v8::String>("diagonalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fDepthDiagonalFieldOfViewV8));
+//
+//			Nan::Set(v8Result, Nan::New<v8::String>("rawDepth").ToLocalChecked(), v8RawDepthResult);
+//		}
+//
+//		if(NodeKinect2FrameTypes::FrameTypes_DepthColor & m_enabledFrameTypes)
+//		{
+//			//reuse the existing buffer
+//			v8::Local<v8::Object> v8DepthColorPixels = Nan::New(m_persistentDepthColorPixels);
+//
+//			v8::Local<v8::Object> v8DepthColorResult = Nan::New<v8::Object>();
+//			Nan::Set(v8DepthColorResult, Nan::New<v8::String>("buffer").ToLocalChecked(), v8DepthColorPixels);
+//
+//			Nan::Set(v8Result, Nan::New<v8::String>("depthColor").ToLocalChecked(), v8DepthColorResult);
+//		}
+//
+//		if(NodeKinect2FrameTypes::FrameTypes_Body & m_enabledFrameTypes)
+//		{
+//			v8::Local<v8::Object> v8BodyResult = getV8BodyFrame_();
+//
+//			Nan::Set(v8Result, Nan::New<v8::String>("body").ToLocalChecked(), v8BodyResult);
+//		}
+//
+//		if(NodeKinect2FrameTypes::FrameTypes_BodyIndexColor & m_enabledFrameTypes)
+//		{
+//			v8::Local<v8::Object> v8BodyIndexColorResult = Nan::New<v8::Object>();
+//
+//			//persistent handle of array with color buffers
+//			v8::Local<v8::Object> v8BodyIndexColorPixels = Nan::New(m_persistentBodyIndexColorPixels);
+//
+//			v8::Local<v8::Array> v8bodies = Nan::New<v8::Array>(BODY_COUNT);
+//			for(int i = 0; i < BODY_COUNT; i++)
+//			{
+//				v8::Local<v8::Object> v8body = Nan::New<v8::Object>();
+//				Nan::Set(v8body, Nan::New<v8::String>("bodyIndex").ToLocalChecked(), Nan::New<v8::Number>(i));
+//				if(m_jsBodyFrameV8.bodies[i].hasPixels && m_trackPixelsForBodyIndexV8[i]) {
+//					//reuse the existing buffer
+//					v8::Local<v8::Value> v8ColorPixels = v8BodyIndexColorPixels->Get(i);
+//					Nan::Set(v8body, Nan::New<v8::String>("buffer").ToLocalChecked(), v8ColorPixels);
+//				}
+//				Nan::Set(v8bodies, i, v8body);
+//			}
+//			Nan::Set(v8BodyIndexColorResult, Nan::New<v8::String>("bodies").ToLocalChecked(), v8bodies);
+//
+//			//field of view pf color camera
+//			Nan::Set(v8BodyIndexColorResult, Nan::New<v8::String>("horizontalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorHorizontalFieldOfViewV8));
+//			Nan::Set(v8BodyIndexColorResult, Nan::New<v8::String>("verticalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorVerticalFieldOfViewV8));
+//			Nan::Set(v8BodyIndexColorResult, Nan::New<v8::String>("diagonalFieldOfView").ToLocalChecked(), Nan::New<v8::Number>(m_fColorDiagonalFieldOfViewV8));
+//
+//			Nan::Set(v8Result, Nan::New<v8::String>("bodyIndexColor").ToLocalChecked(), v8BodyIndexColorResult);
+//		}
+//
+//		v8::Local<v8::Value> argv[] = {
+//			v8Result
+//		};
+//
+//		m_pMultiSourceReaderCallback->Call(1, argv);
+//	}
+//	uv_mutex_unlock(&m_mMultiSourceReaderMutex);
+//}
 
 void MultiSourceReaderThreadLoop(void *arg)
 {
@@ -1738,101 +1738,101 @@ void MultiSourceReaderThreadLoop(void *arg)
 }
 
 
-NAN_METHOD(OpenMultiSourceReaderFunction)
-{
-	uv_mutex_lock(&m_mMultiSourceReaderMutex);
-	if(m_pMultiSourceReaderCallback)
-	{
-		delete m_pMultiSourceReaderCallback;
-		m_pMultiSourceReaderCallback = NULL;
-	}
-
-	Local<Object> jsOptions = info[0].As<Object>();
-	Local<Function> jsCallback = jsOptions->Get(Nan::New<v8::String>("callback").ToLocalChecked()).As<Function>();
-	m_enabledFrameTypes = static_cast<unsigned long>(jsOptions->Get(Nan::New<v8::String>("frameTypes").ToLocalChecked()).As<Number>()->Value());
-
-	m_includeJointFloorData = false;
-
-	Nan::MaybeLocal<v8::Value> v8IncludeJointFloorData = Nan::Get(jsOptions, Nan::New<v8::String>("includeJointFloorData").ToLocalChecked());
-	if(!v8IncludeJointFloorData.IsEmpty())
-	{
-		m_includeJointFloorData = Nan::To<bool>(v8IncludeJointFloorData.ToLocalChecked()).FromJust();
-	}
-
-	//map our own frame types to the correct frame source types
-	m_enabledFrameSourceTypes = FrameSourceTypes::FrameSourceTypes_None;
-	if(
-		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Color
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexColor
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_DepthColor
-	) {
-		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Color;
-	}
-	if(
-		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Infrared
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexInfrared
-	) {
-		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Infrared;
-	}
-	if(
-		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_LongExposureInfrared
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexLongExposureInfrared
-	) {
-		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_LongExposureInfrared;
-	}
-	if(
-		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Depth
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndex
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexColor
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexDepth
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexInfrared
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexLongExposureInfrared
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_RawDepth
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_DepthColor
-	) {
-		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Depth;
-	}
-	if(
-		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndex
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexColor
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexDepth
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexInfrared
-		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexLongExposureInfrared
-	) {
-		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_BodyIndex;
-	}
-	if(
-		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Body
-	) {
-		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Body;
-	}
-	if(
-		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Audio
-	) {
-		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Audio;
-	}
-
-	m_pMultiSourceReaderCallback = new Nan::Callback(jsCallback);
-
-	HRESULT hr = m_pKinectSensor->OpenMultiSourceFrameReader(m_enabledFrameSourceTypes, &m_pMultiSourceFrameReader);
-
-	if (SUCCEEDED(hr))
-	{
-		m_bMultiSourceThreadRunning = true;
-		uv_async_init(uv_default_loop(), &m_aMultiSourceAsync, MultiSourceProgress_);
-		uv_thread_create(&m_tMultiSourceThread, MultiSourceReaderThreadLoop, NULL);
-	}
-
-	uv_mutex_unlock(&m_mMultiSourceReaderMutex);
-	if (SUCCEEDED(hr))
-	{
-		info.GetReturnValue().Set(true);
-	}
-	else
-	{
-		info.GetReturnValue().Set(false);
-	}
-}
+//NAN_METHOD(OpenMultiSourceReaderFunction)
+//{
+//	uv_mutex_lock(&m_mMultiSourceReaderMutex);
+//	if(m_pMultiSourceReaderCallback)
+//	{
+//		delete m_pMultiSourceReaderCallback;
+//		m_pMultiSourceReaderCallback = NULL;
+//	}
+//
+//	Local<Object> jsOptions = info[0].As<Object>();
+//	Local<Function> jsCallback = jsOptions->Get(Nan::New<v8::String>("callback").ToLocalChecked()).As<Function>();
+//	m_enabledFrameTypes = static_cast<unsigned long>(jsOptions->Get(Nan::New<v8::String>("frameTypes").ToLocalChecked()).As<Number>()->Value());
+//
+//	m_includeJointFloorData = false;
+//
+//	Nan::MaybeLocal<v8::Value> v8IncludeJointFloorData = Nan::Get(jsOptions, Nan::New<v8::String>("includeJointFloorData").ToLocalChecked());
+//	if(!v8IncludeJointFloorData.IsEmpty())
+//	{
+//		m_includeJointFloorData = Nan::To<bool>(v8IncludeJointFloorData.ToLocalChecked()).FromJust();
+//	}
+//
+//	//map our own frame types to the correct frame source types
+//	m_enabledFrameSourceTypes = FrameSourceTypes::FrameSourceTypes_None;
+//	if(
+//		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Color
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexColor
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_DepthColor
+//	) {
+//		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Color;
+//	}
+//	if(
+//		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Infrared
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexInfrared
+//	) {
+//		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Infrared;
+//	}
+//	if(
+//		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_LongExposureInfrared
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexLongExposureInfrared
+//	) {
+//		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_LongExposureInfrared;
+//	}
+//	if(
+//		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Depth
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndex
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexColor
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexDepth
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexInfrared
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexLongExposureInfrared
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_RawDepth
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_DepthColor
+//	) {
+//		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Depth;
+//	}
+//	if(
+//		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndex
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexColor
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexDepth
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexInfrared
+//		|| m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_BodyIndexLongExposureInfrared
+//	) {
+//		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_BodyIndex;
+//	}
+//	if(
+//		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Body
+//	) {
+//		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Body;
+//	}
+//	if(
+//		m_enabledFrameTypes & NodeKinect2FrameTypes::FrameTypes_Audio
+//	) {
+//		m_enabledFrameSourceTypes |= FrameSourceTypes::FrameSourceTypes_Audio;
+//	}
+//
+//	m_pMultiSourceReaderCallback = new Nan::Callback(jsCallback);
+//
+//	HRESULT hr = m_pKinectSensor->OpenMultiSourceFrameReader(m_enabledFrameSourceTypes, &m_pMultiSourceFrameReader);
+//
+//	if (SUCCEEDED(hr))
+//	{
+//		m_bMultiSourceThreadRunning = true;
+//		uv_async_init(uv_default_loop(), &m_aMultiSourceAsync, MultiSourceProgress_);
+//		uv_thread_create(&m_tMultiSourceThread, MultiSourceReaderThreadLoop, NULL);
+//	}
+//
+//	uv_mutex_unlock(&m_mMultiSourceReaderMutex);
+//	if (SUCCEEDED(hr))
+//	{
+//		info.GetReturnValue().Set(true);
+//	}
+//	else
+//	{
+//		info.GetReturnValue().Set(false);
+//	}
+//}
 
 NAN_METHOD(CloseMultiSourceReaderFunction)
 {
@@ -1840,30 +1840,31 @@ NAN_METHOD(CloseMultiSourceReaderFunction)
 	info.GetReturnValue().Set(true);
 }
 
-NAN_METHOD(TrackPixelsForBodyIndicesFunction)
-{
-	uv_mutex_lock(&m_mMultiSourceReaderMutex);
-	int i;
-	for(i = 0; i < BODY_COUNT; i++)
-	{
-		m_trackPixelsForBodyIndexV8[i] = false;
-	}
-	Local<Object> jsOptions = info[0].As<Object>();
-	if(jsOptions->IsArray())
-	{
-		Local<Array> jsBodyIndices = info[0].As<Array>();
-		int len = jsBodyIndices->Length();
-		for(i = 0; i < len; i++)
-		{
-			uint32_t index = static_cast<uint32_t>(jsBodyIndices->Get(i).As<Number>()->Value());
-			index = min(index, BODY_COUNT - 1);
-			m_trackPixelsForBodyIndexV8[index] = true;
-		}
-	}
-
-	uv_mutex_unlock(&m_mMultiSourceReaderMutex);
-	info.GetReturnValue().Set(true);
-}
+//NAN_METHOD(TrackPixelsForBodyIndicesFunction)
+//{
+//	uv_mutex_lock(&m_mMultiSourceReaderMutex);
+//	int i;
+//	for(i = 0; i < BODY_COUNT; i++)
+//	{
+//		m_trackPixelsForBodyIndexV8[i] = false;
+//	}
+//	Local<Object> jsOptions = info[0].As<Object>();
+//	Local<Context>* obj = new Local<Context>();
+//	if(jsOptions->IsArray())
+//	{
+//		Local<Array> jsBodyIndices = info[0].As<Array>();
+//		int len = jsBodyIndices->Length();
+//		for(i = 0; i < len; i++)
+//		{
+//			uint32_t index = static_cast<uint32_t>(jsBodyIndices->Get(*obj, static_cast<uint32_t>(i)).As<v8::Number>()->Value());
+//			index = min(index, BODY_COUNT - 1);
+//			m_trackPixelsForBodyIndexV8[index] = true;
+//		}
+//	}
+//
+//	uv_mutex_unlock(&m_mMultiSourceReaderMutex);
+//	info.GetReturnValue().Set(true);
+//}
 
 NAN_MODULE_INIT(Init)
 {
@@ -1929,12 +1930,12 @@ NAN_MODULE_INIT(Init)
 		Nan::GetFunction(Nan::New<FunctionTemplate>(OpenBodyReaderFunction)).ToLocalChecked());
 	Nan::Set(target, Nan::New<String>("closeBodyReader").ToLocalChecked(),
 		Nan::GetFunction(Nan::New<FunctionTemplate>(CloseBodyReaderFunction)).ToLocalChecked());
-	Nan::Set(target, Nan::New<String>("openMultiSourceReader").ToLocalChecked(),
-		Nan::GetFunction(Nan::New<FunctionTemplate>(OpenMultiSourceReaderFunction)).ToLocalChecked());
+	/*Nan::Set(target, Nan::New<String>("openMultiSourceReader").ToLocalChecked(),
+		Nan::GetFunction(Nan::New<FunctionTemplate>(OpenMultiSourceReaderFunction)).ToLocalChecked());*/
 	Nan::Set(target, Nan::New<String>("closeMultiSourceReader").ToLocalChecked(),
 		Nan::GetFunction(Nan::New<FunctionTemplate>(CloseMultiSourceReaderFunction)).ToLocalChecked());
-	Nan::Set(target, Nan::New<String>("trackPixelsForBodyIndices").ToLocalChecked(),
-		Nan::GetFunction(Nan::New<FunctionTemplate>(TrackPixelsForBodyIndicesFunction)).ToLocalChecked());
+	/*Nan::Set(target, Nan::New<String>("trackPixelsForBodyIndices").ToLocalChecked(),
+		Nan::GetFunction(Nan::New<FunctionTemplate>(TrackPixelsForBodyIndicesFunction)).ToLocalChecked());*/
 }
 
 NODE_MODULE(kinect2, Init)
