@@ -1,5 +1,5 @@
 {
-  "name": "kinect2",
+  "name": "kinect2-gcourtney",
   "version": "0.1.7",
   "description": "Nodejs library to access the kinect 2 data from the official MS SDK",
   "main": "./lib/kinect2.js",
